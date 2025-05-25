@@ -53,6 +53,7 @@ WINDOW_SIZE = 60
 MA5_PERIOD = 5
 MA10_PERIOD = 10
 SLOPE_PERIOD = 4
+SIGNAL_LOG_FILE = "signal_log.txt"
 
 BINANCE_WS_URL = f"wss://stream.binance.com:9443/ws/{SYMBOL}@ticker"
 
@@ -75,6 +76,10 @@ decision_count = 0
 class TradingSignalApp:
     def __init__(self, root):
         self.root = root
+        self.selected_bet = tk.IntVar(value=5)
+        self.selected_delay = tk.IntVar(value=0)
+        self.pending_signal_data = None
+        self.active_delay_timer = None
         self.root.title("Trading Signal Dashboard v2 (Improved Boxes)")
         self.root.geometry("1000x850") # 이전 크기 유지 또는 약간 조절
         self.root.configure(bg=COLOR_PRIMARY_BG)
@@ -101,6 +106,12 @@ class TradingSignalApp:
         style.configure('InfoData.TFrame', background=COLOR_CONTENT_BG)
         style.configure('InfoData.TLabel', background=COLOR_CONTENT_BG, foreground=COLOR_TEXT_DARK, font=FONT_INFO_TEXT)
         style.configure('InfoValue.TLabel', background=COLOR_CONTENT_BG, foreground=COLOR_TEXT_DARK, font=(FONT_INFO_TEXT[0], FONT_INFO_TEXT[1], "bold"))
+        style.configure('TRadiobutton', background=COLOR_CONTENT_BG, foreground=COLOR_TEXT_DARK, font=FONT_INFO_TEXT, anchor=tk.W) # Added for Radiobutton styling
+        style.map('TRadiobutton',
+            background=[('active', COLOR_CONTENT_BG)],
+            indicatorcolor=[('selected', BOX_UP_COLOR), ('!selected', COLOR_TEXT_DARK)],
+            foreground=[('active', COLOR_TEXT_DARK)]
+        )
 
 
         # --- UI 구성 (이전 레이아웃 기반) ---
@@ -165,10 +176,37 @@ class TradingSignalApp:
                                              font=FONT_DECISION_COUNT_TEXT, fg=BOX_COUNT_TEXT_COLOR, bg=BOX_COUNT_BG_COLOR, anchor='center')
         self.decision_count_label.pack(expand=True, fill=tk.BOTH)
 
+        # Betting Options Frame
+        betting_frame = ttk.LabelFrame(left_panel, text="Betting Options", style='Info.TLabelframe', padding=10)
+        betting_frame.pack(fill=tk.X, pady=(20,0), expand=False) # Increased pady for spacing
+
+        bet_values = [5, 10, 15, 20]
+        bet_radio_frame = ttk.Frame(betting_frame, style='InfoData.TFrame') # Using InfoData.TFrame for consistent background
+        bet_radio_frame.pack(fill=tk.X, pady=(5,0))
+        for val in bet_values:
+            rb = ttk.Radiobutton(bet_radio_frame, text=str(val), variable=self.selected_bet, value=val, style='TRadiobutton')
+            rb.pack(side=tk.LEFT, padx=10, expand=True) # Adjusted padx
+
+        self.current_bet_label = ttk.Label(betting_frame, text=f"Current Bet: {self.selected_bet.get()}", style='InfoData.TLabel', anchor='center')
+        self.current_bet_label.pack(pady=(8,5), fill=tk.X) # Adjusted pady and fill
+
+        self.selected_bet.trace_add('write', self._update_bet_display_label)
+
+        # Signal Delay Frame
+        delay_frame = ttk.LabelFrame(left_panel, text="Signal Display Delay (seconds)", style='Info.TLabelframe', padding=10)
+        delay_frame.pack(fill=tk.X, pady=(15,0), expand=False) # Increased pady
+
+        delay_values = [0, 3, 5, 10]
+        delay_radio_frame = ttk.Frame(delay_frame, style='InfoData.TFrame') # Using InfoData.TFrame for consistent background
+        delay_radio_frame.pack(fill=tk.X, pady=(5,5)) # Adjusted pady
+        for val in delay_values:
+            rb = ttk.Radiobutton(delay_radio_frame, text=str(val) + "s", variable=self.selected_delay, value=val, style='TRadiobutton')
+            rb.pack(side=tk.LEFT, padx=10, expand=True) # Adjusted padx
+
 
         # 이동평균 정보 프레임 (이전과 유사)
         ma_info_frame = ttk.LabelFrame(left_panel, text="Moving Average Details", style='Info.TLabelframe', padding=10)
-        ma_info_frame.pack(fill=tk.X, pady=(10,0), expand=False)
+        ma_info_frame.pack(fill=tk.X, pady=(20,0), expand=False) # Increased pady for spacing
         ma5_frame = ttk.Frame(ma_info_frame, style='InfoData.TFrame')
         ma5_frame.pack(fill=tk.X, pady=3)
         ttk.Label(ma5_frame, text="MA(25s):", style='InfoData.TLabel').pack(side=tk.LEFT, padx=5) # 기간 표시
@@ -224,6 +262,12 @@ class TradingSignalApp:
         self.ani = FuncAnimation(self.fig, self.update_chart, interval=1000, cache_frame_data=False)
         self.start_countdown()
 
+    def _update_bet_display_label(self, *args):
+        if self.root.winfo_exists():
+            try:
+                self.current_bet_label.config(text=f"Current Bet: {self.selected_bet.get()}")
+            except tk.TclError as e:
+                print(f"Error updating bet display label: {e}") # Log error if widget is destroyed
 
     def flash_signal_card(self):
         original_bg = str(self.signal_card.cget("bg")).lower() # 현재 배경색 저장 (소문자로)
@@ -336,41 +380,103 @@ class TradingSignalApp:
         self.decision_count_var.set(str(decision_count))
         # Count 박스 배경은 고정 (BOX_COUNT_BG_COLOR)
 
-
     def update_signal(self, signal_to_display, ma5_val, ma10_val, ma5_slope_val, ma10_slope_val):
         if not self.root.winfo_exists(): return
-        global decision_count # decision_count를 여기서 참조
+        global decision_count # Ensure decision_count is accessible
+
+        # Store all incoming signal data for potential delayed display
+        self.pending_signal_data = {
+            "signal": signal_to_display,
+            "ma5_val": ma5_val,
+            "ma10_val": ma10_val,
+            "ma5_slope_val": ma5_slope_val,
+            "ma10_slope_val": ma10_slope_val
+        }
 
         try:
-            # MA 값 및 기울기 정보는 항상 업데이트
+            # 1. Update MA values and slopes immediately
             self.ma5_value_label.config(text=f"{ma5_val:,.2f}" if not np.isnan(ma5_val) else "-.--")
             self.ma5_slope_label.config(text=f"{ma5_slope_val:.4f}" if not np.isnan(ma5_slope_val) else "-.----")
             self.ma10_value_label.config(text=f"{ma10_val:,.2f}" if not np.isnan(ma10_val) else "-.--")
             self.ma10_slope_label.config(text=f"{ma10_slope_val:.4f}" if not np.isnan(ma10_slope_val) else "-.----")
 
-            # Decision Count는 항상 업데이트 (1부터 표시됨)
-            self.update_decision_count_display() # decision_count는 create_candle에서 이미 증가됨
+            # 2. Update decision count immediately
+            self.update_decision_count_display() # This function reads global decision_count
 
-            # 두 번째 신호부터 (decision_count >= 2) 주요 UI (신호 카드, Decision Time 박스 색) 업데이트
-            if decision_count >= 2:
-                text_color = COLOR_TEXT_LIGHT
+            # 3. Cancel any existing delay timer
+            if self.active_delay_timer:
+                self.root.after_cancel(self.active_delay_timer)
+                self.active_delay_timer = None
+
+            delay_ms = self.selected_delay.get() * 1000
+
+            if delay_ms == 0:
+                # Call display_final_signal directly
+                self.display_final_signal() # This method will be created in the next step
+                self.active_delay_timer = None
+            else:
+                # Schedule display_final_signal and update signal card to a temporary state
+                self.signal_card.config(text="DELAYED...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT) # Temporary state
+                self.active_delay_timer = self.root.after(delay_ms, self.display_final_signal)
+
+        except tk.TclError as e:
+            print(f"Error in update_signal: {e}")
+        except Exception as e: # Catch any other unexpected errors
+            print(f"Unexpected error in update_signal: {e}")
+
+    def display_final_signal(self):
+        if not self.root.winfo_exists():
+            return
+        if self.pending_signal_data is None:
+            print("display_final_signal called with no pending data.")
+            return
+
+        # These globals are read to determine UI behavior based on current state
+        global decision_count, last_decision_server_time_seconds 
+
+        signal_to_display = self.pending_signal_data["signal"]
+        # MA values are in self.pending_signal_data but not directly used in this method's logic for card/time display
+
+        try:
+            # Update Decision Time display (color and text)
+            dt_bg_color = BOX_FLAT_COLOR 
+            if decision_count >= 2: 
+                if signal_to_display == "UP":
+                    dt_bg_color = BOX_UP_COLOR
+                elif signal_to_display == "DOWN":
+                    dt_bg_color = BOX_DOWN_COLOR
+            
+            self.decision_time_frame.config(bg=dt_bg_color)
+            self.decision_time_label.config(bg=dt_bg_color, fg=COLOR_TEXT_LIGHT)
+
+            if last_decision_server_time_seconds > 0:
+                self.decision_time_label_var.set(datetime.fromtimestamp(last_decision_server_time_seconds).strftime('%H:%M:%S'))
+            else:
+                self.decision_time_label_var.set("--:--:--")
+
+            # Update Signal Card display (text and color)
+            text_color = COLOR_TEXT_LIGHT
+            if decision_count >= 2: 
                 if signal_to_display == "UP":
                     self.signal_card.config(text="↑ UP", bg=BOX_UP_COLOR, fg=text_color)
                 elif signal_to_display == "DOWN":
                     self.signal_card.config(text="↓ DOWN", bg=BOX_DOWN_COLOR, fg=text_color)
                 else: # FLAT
                     self.signal_card.config(text="FLAT", bg=BOX_FLAT_COLOR, fg=text_color)
-                
-                # Decision Time 박스 색상 및 시간 업데이트도 decision_count >= 2 조건 하에
-                self.update_decision_time_display() # 이 함수는 내부적으로 current_signal을 사용
             
-            elif decision_count == 1: # 첫 번째 결정일 때
-                # 신호 카드는 "WAITING" 또는 기본 상태 유지
-                self.signal_card.config(text="ANALYZING...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT) # 예시
-                # Decision Time 박스는 기본 색상 및 시간만 업데이트 (또는 "-" 표시)
-                self.update_decision_time_display() # 첫 번째 decision time은 표시
+            elif decision_count == 1: 
+                self.signal_card.config(text="ANALYZING...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT)
+            
+            else: # decision_count == 0 
+                 self.signal_card.config(text="WAITING...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT)
 
-        except tk.TclError: pass
+            self.active_delay_timer = None
+            
+        except tk.TclError as e:
+            print(f"Error in display_final_signal (likely UI destroyed): {e}")
+        except Exception as e:
+            print(f"Unexpected error in display_final_signal: {e}")
+
     def update_chart(self, frame): # 이전과 동일
         if not self.root.winfo_exists(): return
         if candle_df.empty:
@@ -438,6 +544,16 @@ def create_candle(app_instance, current_event_time_ms):
                 
                 last_decision_server_time_seconds = current_decision_block_start 
                 decision_count += 1 # decision_count는 여기서 증가
+                
+                # --- BEGIN NEW LOGGING CODE ---
+                if previous_internal_signal != current_signal and decision_count >= 1: # Ensure it's a valid signal change
+                    try:
+                        with open(SIGNAL_LOG_FILE, "a", encoding="utf-8") as f:
+                            log_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            f.write(f"[{log_timestamp}] Signal: {previous_internal_signal} -> {current_signal}\n")
+                    except Exception as e:
+                        print(f"Error writing to log file: {e}")
+                # --- END NEW LOGGING CODE ---
                 
                 print(f"--- Internal Signal Update #{decision_count}: {current_signal} ---")
                 print(f"Decision Time (Server): {datetime.fromtimestamp(last_decision_server_time_seconds).strftime('%H:%M:%S')}")
@@ -544,6 +660,12 @@ async def main_manager(app_instance): # 이전과 동일
     print("Main manager terminated.")
 
 if __name__ == "__main__":
+    try:
+        with open(SIGNAL_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Application started. Logging signals.\n")
+    except Exception as e:
+        print(f"Error initializing log file: {e}")
+
     root = tk.Tk()
     app = TradingSignalApp(root)
     threading.Thread(target=lambda: asyncio.run(main_manager(app)), daemon=True).start()
