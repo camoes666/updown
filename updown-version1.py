@@ -134,10 +134,10 @@ class TradingSignalApp:
         content_frame.pack(fill=tk.BOTH, expand=True)
 
         left_panel = ttk.Frame(content_frame, style='Content.TFrame', padding=10)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,10))
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=0) # Adjusted padding
 
         right_panel = ttk.Frame(content_frame, style='Content.TFrame', padding=10)
-        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10,0))
+        # right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10,0)) # Commented out to remove right panel
 
 
         # --- 왼쪽 패널 구성 ---
@@ -180,15 +180,18 @@ class TradingSignalApp:
         betting_frame = ttk.LabelFrame(left_panel, text="Betting Options", style='Info.TLabelframe', padding=10)
         betting_frame.pack(fill=tk.X, pady=(20,0), expand=False) # Increased pady for spacing
 
-        bet_values = [5, 10, 15, 20]
+        self.large_bet_display_label = tk.Label(betting_frame, text=str(self.selected_bet.get()), font=(FONT_FAMILY_MAIN, 40, "bold"), bg=COLOR_CONTENT_BG, fg=COLOR_TEXT_DARK)
+        self.large_bet_display_label.pack(pady=(5, 10))
+
+        bet_values = [5, 10, 20, 30] # Updated bet values
         bet_radio_frame = ttk.Frame(betting_frame, style='InfoData.TFrame') # Using InfoData.TFrame for consistent background
         bet_radio_frame.pack(fill=tk.X, pady=(5,0))
         for val in bet_values:
             rb = ttk.Radiobutton(bet_radio_frame, text=str(val), variable=self.selected_bet, value=val, style='TRadiobutton')
             rb.pack(side=tk.LEFT, padx=10, expand=True) # Adjusted padx
 
-        self.current_bet_label = ttk.Label(betting_frame, text=f"Current Bet: {self.selected_bet.get()}", style='InfoData.TLabel', anchor='center')
-        self.current_bet_label.pack(pady=(8,5), fill=tk.X) # Adjusted pady and fill
+        # self.current_bet_label = ttk.Label(betting_frame, text=f"Current Bet: {self.selected_bet.get()}", style='InfoData.TLabel', anchor='center') # Removed
+        # self.current_bet_label.pack(pady=(8,5), fill=tk.X) # Removed
 
         self.selected_bet.trace_add('write', self._update_bet_display_label)
 
@@ -226,31 +229,31 @@ class TradingSignalApp:
 
 
         # --- 오른쪽 패널 구성 (차트) ---
-        chart_card = ttk.Frame(right_panel, style='Card.TFrame', padding=5)
-        chart_card.pack(fill=tk.BOTH, expand=True)
-        self.fig = Figure(figsize=(6, 5), dpi=100, facecolor=COLOR_CONTENT_BG)
-        self.ax = self.fig.add_subplot(111, facecolor="#e9ecef") # 차트 내부 배경 약간 변경
-        self.ax.tick_params(axis='x', colors=COLOR_TEXT_DARK)
-        self.ax.tick_params(axis='y', colors=COLOR_TEXT_DARK)
-        self.ax.xaxis.label.set_color(COLOR_TEXT_DARK)
-        self.ax.yaxis.label.set_color(COLOR_TEXT_DARK)
-        self.ax.title.set_color(COLOR_TEXT_DARK)
-        self.ax.spines['top'].set_visible(False); self.ax.spines['right'].set_visible(False)
-        self.ax.spines['bottom'].set_color(COLOR_TEXT_SECONDARY); self.ax.spines['left'].set_color(COLOR_TEXT_SECONDARY)
-        self.price_line, = self.ax.plot([], [], color=COLOR_TEXT_DARK, linestyle='-', linewidth=1.5, label='Price')
-        self.ma5_line, = self.ax.plot([], [], color=BOX_UP_COLOR, linestyle='--', linewidth=1.5, label=f'MA({MA5_PERIOD*CANDLE_INTERVAL}s)')
-        self.ma10_line, = self.ax.plot([], [], color=BOX_DOWN_COLOR, linestyle=':', linewidth=1.5, label=f'MA({MA10_PERIOD*CANDLE_INTERVAL}s)')
-        legend = self.ax.legend(loc='best', frameon=False, fontsize=FONT_SIZE_XSMALL)
-        for text in legend.get_texts(): text.set_color(COLOR_TEXT_DARK)
-        self.ax.set_title('5s Candles & Moving Averages', fontdict={'family': FONT_FAMILY_MAIN, 'size':14, 'weight':'bold'})
-        self.ax.set_xlabel('Time (Candle Start)', fontdict={'family': FONT_FAMILY_MAIN, 'size':10})
-        self.ax.set_ylabel('Price', fontdict={'family': FONT_FAMILY_MAIN, 'size':10})
-        self.ax.grid(True, linestyle=':', alpha=0.5, color=COLOR_TEXT_SECONDARY)
-        self.canvas = FigureCanvasTkAgg(self.fig, master=chart_card)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(fill=tk.BOTH, expand=True)
-        self.canvas.draw()
-        self.fig.tight_layout(pad=1.0)
+        # chart_card = ttk.Frame(right_panel, style='Card.TFrame', padding=5) # Commented out
+        # chart_card.pack(fill=tk.BOTH, expand=True) # Commented out
+        # self.fig = Figure(figsize=(6, 5), dpi=100, facecolor=COLOR_CONTENT_BG) # Commented out
+        # self.ax = self.fig.add_subplot(111, facecolor="#e9ecef") # Commented out
+        # self.ax.tick_params(axis='x', colors=COLOR_TEXT_DARK) # Commented out
+        # self.ax.tick_params(axis='y', colors=COLOR_TEXT_DARK) # Commented out
+        # self.ax.xaxis.label.set_color(COLOR_TEXT_DARK) # Commented out
+        # self.ax.yaxis.label.set_color(COLOR_TEXT_DARK) # Commented out
+        # self.ax.title.set_color(COLOR_TEXT_DARK) # Commented out
+        # self.ax.spines['top'].set_visible(False); self.ax.spines['right'].set_visible(False) # Commented out
+        # self.ax.spines['bottom'].set_color(COLOR_TEXT_SECONDARY); self.ax.spines['left'].set_color(COLOR_TEXT_SECONDARY) # Commented out
+        # self.price_line, = self.ax.plot([], [], color=COLOR_TEXT_DARK, linestyle='-', linewidth=1.5, label='Price') # Commented out
+        # self.ma5_line, = self.ax.plot([], [], color=BOX_UP_COLOR, linestyle='--', linewidth=1.5, label=f'MA({MA5_PERIOD*CANDLE_INTERVAL}s)') # Commented out
+        # self.ma10_line, = self.ax.plot([], [], color=BOX_DOWN_COLOR, linestyle=':', linewidth=1.5, label=f'MA({MA10_PERIOD*CANDLE_INTERVAL}s)') # Commented out
+        # legend = self.ax.legend(loc='best', frameon=False, fontsize=FONT_SIZE_XSMALL) # Commented out
+        # for text in legend.get_texts(): text.set_color(COLOR_TEXT_DARK) # Commented out
+        # self.ax.set_title('5s Candles & Moving Averages', fontdict={'family': FONT_FAMILY_MAIN, 'size':14, 'weight':'bold'}) # Commented out
+        # self.ax.set_xlabel('Time (Candle Start)', fontdict={'family': FONT_FAMILY_MAIN, 'size':10}) # Commented out
+        # self.ax.set_ylabel('Price', fontdict={'family': FONT_FAMILY_MAIN, 'size':10}) # Commented out
+        # self.ax.grid(True, linestyle=':', alpha=0.5, color=COLOR_TEXT_SECONDARY) # Commented out
+        # self.canvas = FigureCanvasTkAgg(self.fig, master=chart_card) # Commented out
+        # self.canvas_widget = self.canvas.get_tk_widget() # Commented out
+        # self.canvas_widget.pack(fill=tk.BOTH, expand=True) # Commented out
+        # self.canvas.draw() # Commented out
+        # self.fig.tight_layout(pad=1.0) # Commented out
 
 
         # 상태 표시줄
@@ -259,13 +262,13 @@ class TradingSignalApp:
         self.status_label = ttk.Label(status_frame, text="Initializing...", font=FONT_STATUS, foreground=COLOR_TEXT_SECONDARY, background=COLOR_PRIMARY_BG)
         self.status_label.pack(side=tk.LEFT)
 
-        self.ani = FuncAnimation(self.fig, self.update_chart, interval=1000, cache_frame_data=False)
+        # self.ani = FuncAnimation(self.fig, self.update_chart, interval=1000, cache_frame_data=False) # Commented out
         self.start_countdown()
 
     def _update_bet_display_label(self, *args):
-        if self.root.winfo_exists():
+        if self.root.winfo_exists() and hasattr(self, 'large_bet_display_label'): # Check if label exists
             try:
-                self.current_bet_label.config(text=f"Current Bet: {self.selected_bet.get()}")
+                self.large_bet_display_label.config(text=str(self.selected_bet.get()))
             except tk.TclError as e:
                 print(f"Error updating bet display label: {e}") # Log error if widget is destroyed
 
@@ -345,9 +348,9 @@ class TradingSignalApp:
                 self.update_decision_count_display()
                 self.ma5_value_label.config(text="-.--"); self.ma5_slope_label.config(text="-.----")
                 self.ma10_value_label.config(text="-.--"); self.ma10_slope_label.config(text="-.----")
-                self.price_line.set_data([], []); self.ma5_line.set_data([], []); self.ma10_line.set_data([], [])
-                if self.ax: self.ax.relim(); self.ax.autoscale_view()
-                if self.canvas: self.canvas.draw()
+                # self.price_line.set_data([], []); self.ma5_line.set_data([], []); self.ma10_line.set_data([], []) # Chart related
+                # if self.ax: self.ax.relim(); self.ax.autoscale_view() # Chart related
+                # if self.canvas: self.canvas.draw() # Chart related
 
     def update_price(self, price, event_time_ms): # 이전과 동일
         if not self.root.winfo_exists(): return
@@ -432,20 +435,20 @@ class TradingSignalApp:
             return
 
         # These globals are read to determine UI behavior based on current state
-        global decision_count, last_decision_server_time_seconds 
+        global decision_count, last_decision_server_time_seconds
 
         signal_to_display = self.pending_signal_data["signal"]
         # MA values are in self.pending_signal_data but not directly used in this method's logic for card/time display
 
         try:
             # Update Decision Time display (color and text)
-            dt_bg_color = BOX_FLAT_COLOR 
-            if decision_count >= 2: 
+            dt_bg_color = BOX_FLAT_COLOR
+            if decision_count >= 2:
                 if signal_to_display == "UP":
                     dt_bg_color = BOX_UP_COLOR
                 elif signal_to_display == "DOWN":
                     dt_bg_color = BOX_DOWN_COLOR
-            
+
             self.decision_time_frame.config(bg=dt_bg_color)
             self.decision_time_label.config(bg=dt_bg_color, fg=COLOR_TEXT_LIGHT)
 
@@ -456,7 +459,7 @@ class TradingSignalApp:
 
             # Update Signal Card display (text and color)
             text_color = COLOR_TEXT_LIGHT
-            if decision_count >= 2: 
+            if decision_count >= 2:
                 if signal_to_display == "UP":
                     self.signal_card.config(text="↑ UP", bg=BOX_UP_COLOR, fg=text_color)
                 elif signal_to_display == "DOWN":
@@ -464,36 +467,36 @@ class TradingSignalApp:
                 else: # FLAT
                     self.signal_card.config(text="FLAT", bg=BOX_FLAT_COLOR, fg=text_color)
             
-            elif decision_count == 1: 
+            elif decision_count == 1:
                 self.signal_card.config(text="ANALYZING...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT)
-            
-            else: # decision_count == 0 
+
+            else: # decision_count == 0
                  self.signal_card.config(text="WAITING...", bg=BOX_FLAT_COLOR, fg=COLOR_TEXT_LIGHT)
 
             self.active_delay_timer = None
-            
+
         except tk.TclError as e:
             print(f"Error in display_final_signal (likely UI destroyed): {e}")
         except Exception as e:
             print(f"Unexpected error in display_final_signal: {e}")
 
-    def update_chart(self, frame): # 이전과 동일
-        if not self.root.winfo_exists(): return
-        if candle_df.empty:
-            if self.ax: self.price_line.set_data([],[]); self.ma5_line.set_data([],[]); self.ma10_line.set_data([],[]); self.ax.relim(); self.ax.autoscale_view(tight=True)
-            if self.canvas: self.canvas.draw()
-            return
-        try:
-            timestamps_dt = [datetime.fromtimestamp(ts/1000) for ts in candle_df['candle_start_time']]
-            self.price_line.set_data(timestamps_dt, candle_df['close'])
-            if len(candle_df) >= MA5_PERIOD: self.ma5_line.set_data(timestamps_dt, candle_df['close'].rolling(window=MA5_PERIOD).mean())
-            else: self.ma5_line.set_data([],[])
-            if len(candle_df) >= MA10_PERIOD: self.ma10_line.set_data(timestamps_dt, candle_df['close'].rolling(window=MA10_PERIOD).mean())
-            else: self.ma10_line.set_data([],[])
-            self.ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%H:%M:%S'))
-            self.ax.relim(); self.ax.autoscale_view(tight=True); self.fig.tight_layout(pad=1.0)
-            self.canvas.draw()
-        except Exception: pass
+    # def update_chart(self, frame): # Method Removed
+    #     if not self.root.winfo_exists(): return
+    #     if candle_df.empty:
+    #         if self.ax: self.price_line.set_data([],[]); self.ma5_line.set_data([],[]); self.ma10_line.set_data([],[]); self.ax.relim(); self.ax.autoscale_view(tight=True)
+    #         if self.canvas: self.canvas.draw()
+    #         return
+    #     try:
+    #         timestamps_dt = [datetime.fromtimestamp(ts/1000) for ts in candle_df['candle_start_time']]
+    #         self.price_line.set_data(timestamps_dt, candle_df['close'])
+    #         if len(candle_df) >= MA5_PERIOD: self.ma5_line.set_data(timestamps_dt, candle_df['close'].rolling(window=MA5_PERIOD).mean())
+    #         else: self.ma5_line.set_data([],[])
+    #         if len(candle_df) >= MA10_PERIOD: self.ma10_line.set_data(timestamps_dt, candle_df['close'].rolling(window=MA10_PERIOD).mean())
+    #         else: self.ma10_line.set_data([],[])
+    #         self.ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%H:%M:%S'))
+    #         self.ax.relim(); self.ax.autoscale_view(tight=True); self.fig.tight_layout(pad=1.0)
+    #         self.canvas.draw()
+    #     except Exception: pass
 
 
 # --- 데이터 처리 및 웹소켓 로직 (이전과 동일) ---
@@ -554,7 +557,7 @@ def create_candle(app_instance, current_event_time_ms):
                     except Exception as e:
                         print(f"Error writing to log file: {e}")
                 # --- END NEW LOGGING CODE ---
-                
+
                 print(f"--- Internal Signal Update #{decision_count}: {current_signal} ---")
                 print(f"Decision Time (Server): {datetime.fromtimestamp(last_decision_server_time_seconds).strftime('%H:%M:%S')}")
                 # ... (기타 로그)
